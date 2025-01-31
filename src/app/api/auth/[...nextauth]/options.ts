@@ -76,12 +76,6 @@
 
 
 
-
-
-
-
-
-
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
@@ -102,10 +96,7 @@ export const authOptions: NextAuthOptions = {
         await dbConnect();
         try {
           const user = await UserModel.findOne({
-            $or: [
-              { email: credentials.identifier },
-              { username: credentials.identifier },
-            ],
+            $or: [{ email: credentials.identifier }, { username: credentials.identifier }],
           });
           if (!user) {
             throw new Error('No user found with this email');
@@ -113,10 +104,7 @@ export const authOptions: NextAuthOptions = {
           if (!user.isVerified) {
             throw new Error('Please verify your account before logging in');
           }
-          const isPasswordCorrect = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
+          const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password || '');
           if (isPasswordCorrect) {
             return user;
           } else {
@@ -128,7 +116,6 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    // ✅ Add Google Provider
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
@@ -137,10 +124,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token._id = user._id?.toString(); // Convert ObjectId to string
+        token._id = user._id?.toString();
         token.isVerified = user.isVerified;
         token.isAcceptingMessages = user.isAcceptingMessages;
-        token.username = user.username;
+        token.username = user.username; // Include the username
       }
       return token;
     },
@@ -149,7 +136,7 @@ export const authOptions: NextAuthOptions = {
         session.user._id = token._id;
         session.user.isVerified = token.isVerified;
         session.user.isAcceptingMessages = token.isAcceptingMessages;
-        session.user.username = token.username;
+        session.user.username = token.username; // Include the username
       }
       return session;
     },
@@ -157,17 +144,30 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === 'google') {
         await dbConnect();
         let existingUser = await UserModel.findOne({ email: user.email });
-
+    
         if (!existingUser) {
-          // If the user doesn't exist, create a new one
+          // Generate a username from the user's name or email
+          const username = user.name?.replace(/\s+/g, '').toLowerCase() || user.email?.split('@')[0];
+    
+          // Create a new user
           existingUser = new UserModel({
             email: user.email,
-            username: user.name,
-            isVerified: true, // Assume Google users are verified
+            username: username, // Set the generated username
+            password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10), // Dummy password
+            verifyCode: 'google-auth', // Set a dummy value
+            verifyCodeExpiry: new Date(), // Set to current date
+            isVerified: true, // Mark as verified since it's Google Auth
           });
+    
           await existingUser.save();
         }
-
+    
+        // Attach the username to the user object
+        user.username = existingUser.username;
+        user._id = existingUser._id;
+        user.isVerified = existingUser.isVerified;
+        user.isAcceptingMessages = existingUser.isAcceptingMessages;
+    
         return true;
       }
       return true;
