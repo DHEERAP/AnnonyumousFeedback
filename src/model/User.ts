@@ -73,9 +73,6 @@
 
 
 
-
-
-
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface Message extends Document {
@@ -91,10 +88,10 @@ const MessageSchema: Schema<Message> = new mongoose.Schema({
 export interface User extends Document {
   username: string;
   email: string;
-  password?: string; // ✅ Make optional
-  googleId?: string; // ✅ Store Google ID
-  verifyCode?: string; // ✅ Make optional
-  verifyCodeExpiry?: Date; // ✅ Make optional
+  password?: string; // Optional for Google Auth
+  googleId?: string; // Optional for non-Google users
+  verifyCode?: string; // Optional for Google Auth
+  verifyCodeExpiry?: Date; // Optional for Google Auth
   isVerified: boolean;
   isAcceptingMessages: boolean;
   messages: Message[];
@@ -113,10 +110,10 @@ const UserSchema: Schema<User> = new mongoose.Schema({
     unique: true,
     match: [/.+\@.+\..+/, 'Please use a valid email address'],
   },
-  password: { type: String, required: false }, // ✅ Password not required for Google users
-  googleId: { type: String, unique: true, sparse: true }, // ✅ Store Google ID
-  verifyCode: { type: String, required: false }, // ✅ Optional for Google users
-  verifyCodeExpiry: { type: Date, required: false }, // ✅ Optional for Google users
+  password: { type: String, required: false }, // Optional for Google Auth
+  googleId: { type: String, unique: true, sparse: true }, // Optional for non-Google users
+  verifyCode: { type: String, required: false }, // Optional for Google Auth
+  verifyCodeExpiry: { type: Date, required: false }, // Optional for Google Auth
   isVerified: { type: Boolean, default: false },
   isAcceptingMessages: { type: Boolean, default: true },
   messages: [MessageSchema],
