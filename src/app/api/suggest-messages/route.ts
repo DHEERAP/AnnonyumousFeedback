@@ -22,11 +22,23 @@ export async function GET(req: Request) {
 
     const result = await model.generateContent(prompt);
     console.log(result.response.text());
-    return Response.json({
-      success: true,
-      message: result.response.text(),
-    }, { status: 200 });
+
+
+    //  return Response.json({
+    //   success: true,
+    //   message: result.response.text(),
+    //   // message: "i love you"
+    // }, { status: 200 });
+
+    const text = result.response.text();
+    return new Response(text, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
     
+
   } catch (error) {
     console.error("Error generating text", error);
     return Response.json(
